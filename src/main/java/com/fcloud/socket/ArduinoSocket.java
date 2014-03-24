@@ -5,6 +5,8 @@
  */
 package com.fcloud.socket;
 
+import java.io.IOException;
+
 /**
  * The class <code>ArduinoSocket</code>
  * 
@@ -13,12 +15,24 @@ package com.fcloud.socket;
  */
 public interface ArduinoSocket {
 
-	void onOpen();
+	void onOpen(ArduinoSocket arduinoSocket);
 
 	void onClose();
 
-	void onMessage(String message);
+	void onMessage(ArduinoSocket arduinoSocket,String message);
 
-	void onError(Exception exception);
+	void onError(ArduinoSocket arduinoSocket,Exception exception);
+	
+	boolean isConneted();
+	
+	void close();
+	
+	boolean send(String message)throws IOException;
+	
+	boolean sendLine(String message)throws IOException;
+	
+	String getName();
+	
+	void setName(String name);
 
 }

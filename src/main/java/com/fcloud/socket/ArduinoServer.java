@@ -5,16 +5,26 @@
  */
 package com.fcloud.socket;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.LinkedList;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
+
+import com.fcloud.utils.SocketChannelIOHelper;
 
 /**
  * The class <code>ArduinoServer</code>
@@ -22,21 +32,48 @@ import org.apache.log4j.Logger;
  * @author Feng OuYang
  * @version 1.0
  */
-public abstract class ArduinoServer extends Thread implements ArduinoSocket {
+public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 
 	Logger logger = Logger.getLogger(ArduinoServer.class);
+
+	public static int DECODERS = Runtime.getRuntime().availableProcessors();
 
 	private int port;
 
 	private List<ArduinoSocketWorker> workers;
 
+	protected ServerSocketChannel serverSocketChannel;
+
+	protected Selector selector;
+
+	private Thread selectorthread;
+
+	private volatile AtomicBoolean isclosed = new AtomicBoolean(false);
+	private int queueinvokes = 0;
+
+	public ArduinoServer(int port) {
+		this(port, DECODERS);
+	}
+
 	/**
 	 * @param port
 	 */
-	public ArduinoServer(int port) {
+	public ArduinoServer(int port, int decodercount) {
 		super();
 		this.port = port;
-		workers = new LinkedList<ArduinoServer.ArduinoSocketWorker>();
+
+		workers = new ArrayList<ArduinoSocketWorker>(decodercount);
+		for (int i = 0; i < decodercount; i++) {
+			ArduinoSocketWorker ex = new ArduinoSocketWorker();
+			workers.add(ex);
+			new Thread(ex).start();
+		}
+	}
+
+	public void start() {
+		if (selectorthread != null)
+			throw new IllegalStateException(getClass().getName() + " can only be started once.");
+		new Thread(this).start();
 	}
 
 	/*
@@ -46,58 +83,152 @@ public abstract class ArduinoServer extends Thread implements ArduinoSocket {
 	 */
 	@Override
 	public void run() {
-		setName("ArduinoServer");
-		ServerSocket socket;
-		try {
-			socket = new ServerSocket(port);
-			logger.debug("server port:" + port);
-			Socket client = null;
-			ArduinoSocketWorker socketWorker;
-			while (true) {
-				logger.debug("workers.isEmpty():" + workers.isEmpty());
-				logger.debug("server accept ");
-				client = socket.accept();
-				socketWorker = new ArduinoSocketWorker(client);
-				workers.add(socketWorker);
-				new Thread(socketWorker).start();
+		synchronized (this) {
+			if (selectorthread != null)
+				throw new IllegalStateException(getClass().getName() + " can only be started once.");
+			selectorthread = Thread.currentThread();
+			if (isclosed.get()) {
+				return;
 			}
+		}
+		selectorthread.setName("ArduinoServerSelector" + selectorthread.getId());
+		try {
+			serverSocketChannel = ServerSocketChannel.open();
+			serverSocketChannel.configureBlocking(false);
+			ServerSocket serverSocket = serverSocketChannel.socket();
+			serverSocket.bind(new InetSocketAddress(port));
+			logger.debug("bind port:" + port);
+			selector = Selector.open();
+			serverSocketChannel.register(selector, serverSocketChannel.validOps());
 		} catch (IOException e) {
+			logger.error("", e);
+//			onError(e);
+			return;
+		}
+
+		try {
+			while (!selectorthread.isInterrupted()) {
+				SelectionKey key = null;
+				ArduinoSocketImpl conn = null;
+				try {
+					selector.select();
+					Set<SelectionKey> keys = selector.selectedKeys();
+					Iterator<SelectionKey> i = keys.iterator();
+					while (i.hasNext()) {
+						key = i.next();
+						if (!key.isValid()) {
+							continue;
+						}
+
+						if (key.isAcceptable()) {
+							// 创建新连接
+							SocketChannel channel = serverSocketChannel.accept();
+							channel.configureBlocking(false);
+							ArduinoSocketImpl w = new ArduinoSocketImpl(this);
+							w.key = channel.register(selector, SelectionKey.OP_READ, w);
+							w.channel = channel;
+							i.remove();
+							continue;
+						}
+
+						if (key.isReadable()) {
+							conn = (ArduinoSocketImpl) key.attachment();
+							ByteBuffer buf = createBuffer();
+							if (SocketChannelIOHelper.read(buf, conn, conn.channel)) {
+								if (buf.hasRemaining()) {
+									conn.inQueue.put(buf);
+									queue(conn);
+								}
+							}
+						}
+
+						if (key.isWritable()) {
+							conn = (ArduinoSocketImpl) key.attachment();
+							try {
+
+								SocketChannelIOHelper.batch(conn, conn.channel);
+
+							} catch (IOException e) {
+								throw e;
+							}
+						}
+					}
+				} catch (IOException e) {
+					if (key != null)
+						key.cancel();
+					handleIOException(key, conn, e);
+				}
+			}
+		} catch (Exception e) {
 			logger.error("", e);
 		}
 	}
 
-	public boolean send(String messsage) {
-		if (workers.isEmpty()) {
-			logger.debug("not client conned");
-		} else {
-			return workers.get(0).send(messsage);
+	private void handleIOException(SelectionKey key, ArduinoSocket conn, IOException ex) {
+		// onWebsocketError( conn, ex );// conn may be null here
+		if (conn != null) {
+			conn.onClose();
+		} else if (key != null) {
+			SelectableChannel channel = key.channel();
+			if (channel != null && channel.isOpen()) {
+				try {
+					channel.close();
+				} catch (IOException e) {
+					// there is nothing that must be done here
+				}
+				// if( WebSocketImpl.DEBUG )
+				System.out.println("Connection closed because of" + ex);
+			}
 		}
-		return false;
 	}
 
-	public boolean sendln(String line) {
-		return send(line + "\r\n");
-	}
-
-	public boolean flush() {
-		if (workers.isEmpty()) {
-			logger.debug("not client conned");
-		} else {
-			return workers.get(0).flush();
+	private void queue(ArduinoSocketImpl ws) throws InterruptedException {
+		if (ws.workerThread == null) {
+			ws.workerThread = workers.get(queueinvokes % workers.size());
+			queueinvokes++;
 		}
-		return false;
+		ws.workerThread.put(ws);
 	}
 
-	private class ArduinoSocketWorker implements Runnable {
+	public ByteBuffer createBuffer() {
+		return ByteBuffer.allocate(Short.MAX_VALUE);
+	}
 
-		private Socket socket;
+	public void onAduinoSocketOpen(ArduinoSocket conn) {
+		onOpen(conn);
+	}
 
-		/**
-		 * @param socket
-		 */
-		public ArduinoSocketWorker(Socket socket) {
-			super();
-			this.socket = socket;
+	public void onAduinoSocketError(ArduinoSocket conn, Exception e) {
+		onError(conn,e);
+	}
+
+	public void onAduinoSocketClose(ArduinoSocket conn) {
+		onClose();
+	}
+
+	public void onAduinoSocketMessae(ArduinoSocket conn, String message) {
+		onMessage(conn,message);
+	}
+
+	protected abstract void onOpen(ArduinoSocket arduinoSocket);
+
+	protected abstract void onClose();
+
+	protected abstract void onMessage(ArduinoSocket arduinoSocket,String message);
+
+	protected abstract void onError(ArduinoSocket arduinoSocket,Exception exception);
+
+	public class ArduinoSocketWorker implements Runnable {
+
+		private BlockingQueue<ArduinoSocketImpl> iqueue;
+
+		public ArduinoSocketWorker() {
+			iqueue = new LinkedBlockingQueue<ArduinoSocketImpl>();
+
+		}
+
+		public void put(ArduinoSocketImpl ws) throws InterruptedException {
+			iqueue.put(ws);
 		}
 
 		/*
@@ -107,78 +238,28 @@ public abstract class ArduinoServer extends Thread implements ArduinoSocket {
 		 */
 		@Override
 		public void run() {
+			Thread.currentThread().setName("ArduinoSocketWorker-" + Thread.currentThread().getId());
 
-			if (null != socket) {
-				onOpen();
-			}
-
+			ArduinoSocketImpl ws = null;
 			try {
-				final BufferedReader reader = new BufferedReader(new InputStreamReader(
-						socket.getInputStream(), "UTF-8"));
-				String line = null;
-				while (null != (line = reader.readLine())) {
-					onMessage(line);
+				while (true) {
+					ByteBuffer buf = null;
+					ws = iqueue.take();
+					buf = ws.inQueue.poll();
+					assert (buf != null);
+					try {
+						ws.onMessage(ws, new String(buf.array(), buf.position(), buf.remaining(),
+								"UTF-8"));
+					} catch (Exception e) {
+						ws.close();
+					}
 				}
-
-			} catch (IOException e) {
-				onError(e);
-			} finally {
-				onClose();
+			} catch (InterruptedException e) {
+			} catch (RuntimeException e) {
+				ws.close();
 			}
-			workers.remove(this);
-			socket = null;
-		}
-
-		boolean send(String messsage) {
-			if (socket != null) {
-				OutputStream out;
-				try {
-					out = socket.getOutputStream();
-					out.write(messsage.getBytes("UTF-8"));
-				} catch (IOException e) {
-					onError(e);
-					workers.remove(this);
-					socket = null;
-					onClose();
-				}
-
-			}
-			return false;
-		}
-
-		boolean flush() {
-			if (socket != null) {
-				try {
-					socket.getOutputStream().flush();
-				} catch (IOException e) {
-					onError(e);
-					workers.remove(this);
-					socket = null;
-					onClose();
-					return false;
-				}
-				return true;
-
-			}
-			return false;
 		}
 
 	}
-
-	// public static void main(String[] args) {
-	// ArduinoServer arduinoServer = new ArduinoServer(80);
-	// arduinoServer.start();
-	// Scanner scanner = new Scanner(System.in);
-	// while (true) {
-	// System.out.println("input:");
-	// String s = scanner.nextLine();
-	// if (arduinoServer.isConnnetd) {
-	// arduinoServer.sendln(s);
-	// arduinoServer.flush();
-	// } else {
-	// System.err.println("not conneted!");
-	// }
-	// }
-	// }
 
 }

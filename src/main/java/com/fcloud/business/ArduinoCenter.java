@@ -5,9 +5,12 @@
  */
 package com.fcloud.business;
 
+import java.io.IOException;
+
 import org.apache.log4j.Logger;
 
 import com.fcloud.socket.ArduinoServer;
+import com.fcloud.socket.ArduinoSocket;
 
 /**
  * The class <code>ArduinoCenter</code>
@@ -16,12 +19,10 @@ import com.fcloud.socket.ArduinoServer;
  * @version 1.0
  */
 public class ArduinoCenter extends ArduinoServer {
-	
-	Logger logger = Logger.getLogger(ArduinoCenter.class);
-	
-	private static ArduinoCenter arduinoCenter;
 
-	private boolean conneted;
+	Logger logger = Logger.getLogger(ArduinoCenter.class);
+
+	private static ArduinoCenter arduinoCenter;
 
 	public static final ArduinoCenter getInstance() {
 		if (null == arduinoCenter) {
@@ -44,9 +45,8 @@ public class ArduinoCenter extends ArduinoServer {
 	 * @see com.fcloud.socket.ArduinoSocket#onOpen()
 	 */
 	@Override
-	public void onOpen() {
+	public void onOpen(ArduinoSocket arduinoSocket) {
 		logger.debug("onOpen");
-		conneted = true;
 	}
 
 	/*
@@ -57,7 +57,6 @@ public class ArduinoCenter extends ArduinoServer {
 	@Override
 	public void onClose() {
 		logger.debug("onClose");
-		conneted = false;
 	}
 
 	/*
@@ -66,10 +65,15 @@ public class ArduinoCenter extends ArduinoServer {
 	 * @see com.fcloud.socket.ArduinoSocket#onMessage(java.lang.String)
 	 */
 	@Override
-	public void onMessage(String message) {
+	public void onMessage(ArduinoSocket arduinoSocket, String message) {
 		logger.debug("message:" + message);
-		if(message.contains("hand")){
-			sendln("200");
+		// if(message.contains("hand")){
+		// sendln("200");
+		// }
+		try {
+			arduinoSocket.sendLine("hello!" + System.currentTimeMillis());
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -79,16 +83,8 @@ public class ArduinoCenter extends ArduinoServer {
 	 * @see com.fcloud.socket.ArduinoSocket#onError(java.lang.Exception)
 	 */
 	@Override
-	public void onError(Exception exception) {
+	public void onError(ArduinoSocket arduinoSocket, Exception exception) {
 		logger.debug("onError");
-		conneted = false;
-	}
-
-	/**
-	 * @return the conneted
-	 */
-	public boolean isConneted() {
-		return conneted;
 	}
 
 }

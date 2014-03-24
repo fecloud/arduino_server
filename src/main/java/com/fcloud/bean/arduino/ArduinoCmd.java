@@ -16,6 +16,8 @@ public class ArduinoCmd {
 	private String key;
 
 	private String value;
+	
+	public static final String Tokenizer = ":";
 
 	/**
 	 * @return the key
