@@ -41,14 +41,17 @@ public class SocketChannelIOHelper {
 	//
 	/** Returns whether the whole outQueue has been flushed */
 	public static boolean batch(ArduinoSocketImpl ws, ByteChannel sockchannel) throws IOException {
-		ByteBuffer buffer = ws.outQueue.poll();
-		do {
-			sockchannel.write(buffer);
-			if (buffer.remaining() == 0) {
-				return true;
-			}
-		} while (buffer != null);
-
-		return true;
+		ByteBuffer buffer = ws.outQueue.peek();
+		if (null != buffer) {
+			do {
+				sockchannel.write(buffer);
+				ws.outQueue.poll();
+				buffer = ws.outQueue.peek();
+			} while (buffer != null);
+			
+			return true;
+			
+		}
+		return false;
 	}
 }

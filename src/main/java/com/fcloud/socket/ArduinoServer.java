@@ -51,6 +51,8 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 	private volatile AtomicBoolean isclosed = new AtomicBoolean(false);
 	private int queueinvokes = 0;
 
+	private List<ArduinoSocket> conntions = new ArrayList<ArduinoSocket>();
+
 	public ArduinoServer(int port) {
 		this(port, DECODERS);
 	}
@@ -102,7 +104,7 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 			serverSocketChannel.register(selector, serverSocketChannel.validOps());
 		} catch (IOException e) {
 			logger.error("", e);
-//			onError(e);
+			// onError(e);
 			return;
 		}
 
@@ -144,12 +146,9 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 
 						if (key.isWritable()) {
 							conn = (ArduinoSocketImpl) key.attachment();
-							try {
-
-								SocketChannelIOHelper.batch(conn, conn.channel);
-
-							} catch (IOException e) {
-								throw e;
+							if (SocketChannelIOHelper.batch(conn, conn.channel)) {
+								if (key.isValid())
+									key.interestOps(SelectionKey.OP_READ);
 							}
 						}
 					}
@@ -161,6 +160,29 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 			}
 		} catch (Exception e) {
 			logger.error("", e);
+		}
+	}
+
+	public void stop() throws InterruptedException {
+		if (!isclosed.compareAndSet(false, true)) { // this also makes sure that
+			return;
+		}
+
+		for (ArduinoSocket ws : conntions) {
+			ws.close();
+		}
+		synchronized (this) {
+			if (selectorthread != null) {
+				if (Thread.currentThread() != selectorthread) {
+
+				}
+				if (selectorthread != Thread.currentThread()) {
+					if (conntions.size() > 0)
+						selectorthread.join(0);// isclosed will tell the
+					selectorthread.interrupt();// in case the selectorthread did
+					selectorthread.join();
+				}
+			}
 		}
 	}
 
@@ -191,32 +213,35 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 	}
 
 	public ByteBuffer createBuffer() {
-		return ByteBuffer.allocate(Short.MAX_VALUE);
+		return ByteBuffer.allocate(512);
 	}
 
 	public void onAduinoSocketOpen(ArduinoSocket conn) {
 		onOpen(conn);
+		conntions.add(conn);
 	}
 
 	public void onAduinoSocketError(ArduinoSocket conn, Exception e) {
-		onError(conn,e);
+		onError(conn, e);
+		conntions.remove(conn);
 	}
 
 	public void onAduinoSocketClose(ArduinoSocket conn) {
 		onClose();
+		conntions.remove(conn);
 	}
 
 	public void onAduinoSocketMessae(ArduinoSocket conn, String message) {
-		onMessage(conn,message);
+		onMessage(conn, message);
 	}
 
 	protected abstract void onOpen(ArduinoSocket arduinoSocket);
 
 	protected abstract void onClose();
 
-	protected abstract void onMessage(ArduinoSocket arduinoSocket,String message);
+	protected abstract void onMessage(ArduinoSocket arduinoSocket, String message);
 
-	protected abstract void onError(ArduinoSocket arduinoSocket,Exception exception);
+	protected abstract void onError(ArduinoSocket arduinoSocket, Exception exception);
 
 	public class ArduinoSocketWorker implements Runnable {
 
