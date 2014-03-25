@@ -46,7 +46,7 @@ public class ArduinoCenter extends ArduinoServer {
 	 */
 	@Override
 	public void onOpen(ArduinoSocket arduinoSocket) {
-		logger.debug("onOpen");
+		logger.debug("onOpen name:" + arduinoSocket.getName());
 	}
 
 	/*
@@ -87,4 +87,7 @@ public class ArduinoCenter extends ArduinoServer {
 		logger.debug("onError");
 	}
 
+	public static void main(String[] args) {
+		ArduinoCenter.getInstance();
+	}
 }
