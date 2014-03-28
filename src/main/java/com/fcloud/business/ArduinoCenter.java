@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 
 import com.fcloud.socket.ArduinoServer;
 import com.fcloud.socket.ArduinoSocket;
+import com.fcloud.utils.Tools;
 
 /**
  * The class <code>ArduinoCenter</code>
@@ -38,8 +39,10 @@ public class ArduinoCenter extends ArduinoServer {
 	private ArduinoCenter() {
 		super(9000);
 	}
-	
-	
+
+	public ArduinoCenter(int port) {
+		super(port);
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -91,12 +94,17 @@ public class ArduinoCenter extends ArduinoServer {
 
 	public static void main(String[] args) {
 		if (null == arduinoCenter) {
-			arduinoCenter = new ArduinoCenter();
+			if (args != null && Tools.isNum(args[0])) {
+				arduinoCenter = new ArduinoCenter(Integer.valueOf(args[0]));
+				System.out.println("bind port:" + args[0]);
+			} else {
+				arduinoCenter = new ArduinoCenter();
+			}
 			arduinoCenter.start();
 		}
 	}
-	
-	public int getClientNum(){
+
+	public int getClientNum() {
 		return conntions.size();
 	}
 }
