@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
@@ -53,6 +54,10 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 
 	protected List<ArduinoSocket> conntions = new ArrayList<ArduinoSocket>();
 
+	private BlockingQueue<ByteBuffer> buffers;
+
+	private AtomicInteger queuesize = new AtomicInteger(0);
+
 	public ArduinoServer(int port) {
 		this(port, DECODERS);
 	}
@@ -65,6 +70,7 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 		this.port = port;
 
 		workers = new ArrayList<ArduinoSocketWorker>(decodercount);
+		buffers = new LinkedBlockingQueue<ByteBuffer>();
 		for (int i = 0; i < decodercount; i++) {
 			ArduinoSocketWorker ex = new ArduinoSocketWorker();
 			workers.add(ex);
@@ -124,28 +130,41 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 
 						if (key.isAcceptable()) {
 							// 创建新连接
+
 							SocketChannel channel = serverSocketChannel.accept();
 							channel.configureBlocking(false);
 							ArduinoSocketImpl w = new ArduinoSocketImpl(this);
 							w.key = channel.register(selector, SelectionKey.OP_READ, w);
 							w.channel = channel;
+							System.out.println("isAcceptable" + key);
 							i.remove();
+							allocateBuffers(w);
 							continue;
 						}
 
 						if (key.isReadable()) {
+							System.out.println("isReadable" + key);
 							conn = (ArduinoSocketImpl) key.attachment();
-							ByteBuffer buf = createBuffer();
-							if (SocketChannelIOHelper.read(buf, conn, conn.channel)) {
-								if (buf.hasRemaining()) {
-									conn.inQueue.put(buf);
-									queue(conn);
+							ByteBuffer buf = takeBuffer();
+							try {
+								if (SocketChannelIOHelper.read(buf, conn, conn.channel)) {
+									if (buf.hasRemaining()) {
+										conn.inQueue.put(buf);
+										queue(conn);
+										i.remove();
+									}
+								} else {
+									pushBuffer(buf);
 								}
+							} catch (IOException e) {
+								pushBuffer(buf);
+								throw e;
 							}
 
 						}
 
 						if (key.isWritable()) {
+							System.out.println("isWritable" + key);
 							conn = (ArduinoSocketImpl) key.attachment();
 							if (SocketChannelIOHelper.batch(conn, conn.channel)) {
 								if (key.isValid())
@@ -205,6 +224,18 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 		}
 	}
 
+	protected void allocateBuffers(ArduinoSocket c) throws InterruptedException {
+		if (queuesize.get() >= 2 * workers.size() + 1) {
+			return;
+		}
+		queuesize.incrementAndGet();
+		buffers.put(createBuffer());
+	}
+
+	public ByteBuffer createBuffer() {
+		return ByteBuffer.allocate(512);
+	}
+
 	private void queue(ArduinoSocketImpl ws) throws InterruptedException {
 		if (ws.workerThread == null) {
 			ws.workerThread = workers.get(queueinvokes % workers.size());
@@ -213,8 +244,14 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 		ws.workerThread.put(ws);
 	}
 
-	public ByteBuffer createBuffer() {
-		return ByteBuffer.allocate(512);
+	private ByteBuffer takeBuffer() throws InterruptedException {
+		return buffers.take();
+	}
+
+	private void pushBuffer(ByteBuffer buf) throws InterruptedException {
+		if (buffers.size() > queuesize.intValue())
+			return;
+		buffers.put(buf);
 	}
 
 	public void onAduinoSocketOpen(ArduinoSocket conn) {
@@ -234,6 +271,18 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 
 	public void onAduinoSocketMessae(ArduinoSocket conn, String message) {
 		onMessage(conn, message);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.fcloud.socket.ArduinoSocketListener#onWriteDemand(com.fcloud.socket
+	 * .ArduinoSocket)
+	 */
+	@Override
+	public void onWriteDemand(ArduinoSocket conn) {
+		selector.wakeup();
 	}
 
 	protected abstract void onOpen(ArduinoSocket arduinoSocket);
@@ -278,6 +327,8 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 								"UTF-8"));
 					} catch (Exception e) {
 						ws.close();
+					} finally {
+						pushBuffer(buf);
 					}
 				}
 			} catch (InterruptedException e) {

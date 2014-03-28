@@ -96,7 +96,7 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	@Override
 	public void onMessage(ArduinoSocket arduinoSocket, String message) {
 		putBuffer(message);
-		if (this.messages.peek() != null) {
+		while (this.messages.peek() != null) {
 			final String msg = this.messages.poll();
 			if (this.statu != Conn_Statu.HAND)
 				if (isHand(msg)) {
@@ -185,11 +185,13 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	public boolean send(String message) throws IOException {
 		logger.debug("send:" + message);
 		if (isConneted()) {
-			ByteBuffer buffer = ByteBuffer.allocate(1024);
-			buffer.put(message.getBytes("UTF-8"));
+			final byte [] bs = message.getBytes("UTF-8");
+			ByteBuffer buffer = ByteBuffer.wrap(bs);
+			buffer.put(bs);
 			buffer.flip();
 			outQueue.add(buffer);
 			key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+			listener.onWriteDemand(this);
 			return true;
 		}
 		return false;

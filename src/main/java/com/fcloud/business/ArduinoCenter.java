@@ -38,6 +38,8 @@ public class ArduinoCenter extends ArduinoServer {
 	private ArduinoCenter() {
 		super(9000);
 	}
+	
+	
 
 	/*
 	 * (non-Javadoc)
@@ -88,7 +90,10 @@ public class ArduinoCenter extends ArduinoServer {
 	}
 
 	public static void main(String[] args) {
-		ArduinoCenter.getInstance();
+		if (null == arduinoCenter) {
+			arduinoCenter = new ArduinoCenter();
+			arduinoCenter.start();
+		}
 	}
 	
 	public int getClientNum(){

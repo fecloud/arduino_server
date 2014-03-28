@@ -21,4 +21,6 @@ public interface ArduinoSocketListener {
 	
 	void onAduinoSocketMessae(ArduinoSocket conn,String message);
 	
+	void onWriteDemand(ArduinoSocket conn);
+	
 }
