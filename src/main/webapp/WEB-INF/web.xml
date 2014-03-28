@@ -11,6 +11,6 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Arduino</servlet-name>
-		<url-pattern>/Arduino</url-pattern>
+		<url-pattern>/arduino</url-pattern>
 	</servlet-mapping>
 </web-app>

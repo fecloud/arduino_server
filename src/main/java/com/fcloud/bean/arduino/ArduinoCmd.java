@@ -13,25 +13,36 @@ package com.fcloud.bean.arduino;
  */
 public class ArduinoCmd {
 
-	private String key;
+	private int type;
 
 	private String value;
-	
-	public static final String Tokenizer = ":";
 
-	/**
-	 * @return the key
-	 */
-	public String getKey() {
-		return key;
+	public ArduinoCmd() {
 	}
 
 	/**
-	 * @param key
-	 *            the key to set
+	 * @param type
+	 * @param value
 	 */
-	public void setKey(String key) {
-		this.key = key;
+	public ArduinoCmd(int type, String value) {
+		super();
+		this.type = type;
+		this.value = value;
+	}
+
+	/**
+	 * @return the type
+	 */
+	public int getType() {
+		return type;
+	}
+
+	/**
+	 * @param type
+	 *            the type to set
+	 */
+	public void setType(int type) {
+		this.type = type;
 	}
 
 	/**
@@ -57,21 +68,11 @@ public class ArduinoCmd {
 	@Override
 	public String toString() {
 		final StringBuilder builder = new StringBuilder();
-		builder.append(key).append(":").append(value);
+		builder.append("type").append("=").append(this.type);
+		if (null != value) {
+			builder.append("value").append("=").append(this.value);
+		}
 		return builder.toString();
 	}
 
-	public static final ArduinoCmd fromString(String str) {
-		if (null != str && str.contains(":")) {
-			final String[] strs = str.split(":");
-			if (null != strs && strs.length == 2) {
-				ArduinoCmd arduinoCmd = new ArduinoCmd();
-				arduinoCmd.setKey(strs[0]);
-				arduinoCmd.setValue(strs[1]);
-				return arduinoCmd;
-			}
-		}
-		return null;
-
-	}
 }

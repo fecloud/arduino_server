@@ -14,6 +14,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
+
 import com.fcloud.socket.ArduinoServer.ArduinoSocketWorker;
 
 /**
@@ -23,6 +25,8 @@ import com.fcloud.socket.ArduinoServer.ArduinoSocketWorker;
  * @version 1.0
  */
 public class ArduinoSocketImpl implements ArduinoSocket {
+
+	Logger logger = Logger.getLogger(ArduinoSocketImpl.class);
 
 	enum Conn_Statu {
 		HAND, CONNETED, DISCONNET
@@ -179,6 +183,7 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	 */
 	@Override
 	public boolean send(String message) throws IOException {
+		logger.debug("send:" + message);
 		if (isConneted()) {
 			ByteBuffer buffer = ByteBuffer.allocate(1024);
 			buffer.put(message.getBytes("UTF-8"));

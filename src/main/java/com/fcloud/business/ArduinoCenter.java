@@ -90,4 +90,8 @@ public class ArduinoCenter extends ArduinoServer {
 	public static void main(String[] args) {
 		ArduinoCenter.getInstance();
 	}
+	
+	public int getClientNum(){
+		return conntions.size();
+	}
 }

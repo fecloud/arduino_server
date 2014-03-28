@@ -51,7 +51,7 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 	private volatile AtomicBoolean isclosed = new AtomicBoolean(false);
 	private int queueinvokes = 0;
 
-	private List<ArduinoSocket> conntions = new ArrayList<ArduinoSocket>();
+	protected List<ArduinoSocket> conntions = new ArrayList<ArduinoSocket>();
 
 	public ArduinoServer(int port) {
 		this(port, DECODERS);
@@ -142,6 +142,7 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 									queue(conn);
 								}
 							}
+
 						}
 
 						if (key.isWritable()) {
