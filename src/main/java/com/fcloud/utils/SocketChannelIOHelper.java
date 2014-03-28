@@ -10,7 +10,7 @@ public class SocketChannelIOHelper {
 
 	public static boolean read(final ByteBuffer buf, ArduinoSocketImpl ws, ByteChannel channel)
 			throws IOException {
-		org.apache.log4j.Logger.getLogger(SocketChannelIOHelper.class).debug("read");
+		//org.apache.log4j.Logger.getLogger(SocketChannelIOHelper.class).debug("read");
 		buf.clear();
 		int read = channel.read(buf);
 		buf.flip();
@@ -25,7 +25,7 @@ public class SocketChannelIOHelper {
 	
 	public static boolean batch(ArduinoSocketImpl ws, ByteChannel sockchannel) throws IOException {
 
-		org.apache.log4j.Logger.getLogger(SocketChannelIOHelper.class).debug("batch");
+	//	org.apache.log4j.Logger.getLogger(SocketChannelIOHelper.class).debug("batch");
 		
 		ByteBuffer buffer = ws.outQueue.peek();
 		if (null != buffer) {

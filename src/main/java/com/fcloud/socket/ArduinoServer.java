@@ -136,14 +136,12 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 							ArduinoSocketImpl w = new ArduinoSocketImpl(this);
 							w.key = channel.register(selector, SelectionKey.OP_READ, w);
 							w.channel = channel;
-							System.out.println("isAcceptable" + key);
 							i.remove();
 							allocateBuffers(w);
 							continue;
 						}
 
 						if (key.isReadable()) {
-							System.out.println("isReadable" + key);
 							conn = (ArduinoSocketImpl) key.attachment();
 							ByteBuffer buf = takeBuffer();
 							try {
@@ -164,7 +162,6 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 						}
 
 						if (key.isWritable()) {
-							System.out.println("isWritable" + key);
 							conn = (ArduinoSocketImpl) key.attachment();
 							if (SocketChannelIOHelper.batch(conn, conn.channel)) {
 								if (key.isValid())

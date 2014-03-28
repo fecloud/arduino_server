@@ -183,7 +183,7 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	 */
 	@Override
 	public boolean send(String message) throws IOException {
-		logger.debug("send:" + message);
+		//logger.debug("send:" + message);
 		if (isConneted()) {
 			final byte [] bs = message.getBytes("UTF-8");
 			ByteBuffer buffer = ByteBuffer.wrap(bs);
