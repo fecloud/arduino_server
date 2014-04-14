@@ -37,7 +37,7 @@ public class ArduinoCenter extends ArduinoServer {
 	 * @param port
 	 */
 	private ArduinoCenter() {
-		super(9000);
+		super(30156);
 	}
 
 	public ArduinoCenter(int port) {
