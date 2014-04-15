@@ -94,7 +94,7 @@ public class ArduinoCenter extends ArduinoServer {
 
 	public static void main(String[] args) {
 		if (null == arduinoCenter) {
-			if (args != null && Tools.isNum(args[0])) {
+			if (args != null && args.length >0 && Tools.isNum(args[0])) {
 				arduinoCenter = new ArduinoCenter(Integer.valueOf(args[0]));
 				System.out.println("bind port:" + args[0]);
 			} else {

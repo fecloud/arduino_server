@@ -33,7 +33,7 @@ public class ArduinoClient extends Thread {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		Socket socket = new Socket("111.206.45.12", 30156);
+		Socket socket = new Socket("127.0.0.1", 30156);
 		socket.setSoTimeout(10000);
 		OutputStream out = socket.getOutputStream();
 		out.write("Arduino uno\r\n".getBytes("UTF-8"));
