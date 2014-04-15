@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -120,7 +122,9 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 				ArduinoSocketImpl conn = null;
 				try {
 					selector.select();
+					
 					Set<SelectionKey> keys = selector.selectedKeys();
+					System.err.println("selector.select()" + keys.size());
 					Iterator<SelectionKey> i = keys.iterator();
 					while (i.hasNext()) {
 						key = i.next();
@@ -167,9 +171,14 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 								if (key.isValid())
 									key.interestOps(SelectionKey.OP_READ);
 							}
+							i.remove();
 						}
 					}
-				} catch (IOException e) {
+				} catch ( CancelledKeyException e ) {
+					// an other thread may cancel the key
+				} catch ( ClosedByInterruptException e ) {
+					
+				}catch (IOException e) {
 					if (key != null)
 						key.cancel();
 					handleIOException(key, conn, e);

@@ -84,6 +84,7 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	 */
 	@Override
 	public void onClose() {
+		this.outQueue.clear();
 		listener.onAduinoSocketClose(this);
 
 	}

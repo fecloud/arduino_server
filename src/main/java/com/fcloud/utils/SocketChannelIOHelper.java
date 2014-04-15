@@ -16,7 +16,10 @@ public class SocketChannelIOHelper {
 		buf.flip();
 
 		if (read == -1) {
-			// ws.eot();
+			 ws.onClose();
+			 if(ws.key != null)
+				 ws.key.cancel();
+			 ws.channel.close();
 			return false;
 		}
 		return read != 0;
