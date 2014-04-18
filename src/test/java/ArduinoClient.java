@@ -4,7 +4,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 
 /**
@@ -31,10 +30,10 @@ public class ArduinoClient extends Thread {
 	}
 
 	public void pre() throws UnknownHostException, IOException {
-		socket = new Socket("127.0.0.1", 30156);
+		socket = new Socket("111.206.45.12", 30156);
 		socket.setSoTimeout(10000);
 		OutputStream out = socket.getOutputStream();
-		out.write("Arduino uno\r\n".getBytes("UTF-8"));
+		out.write("Arduino Uno\r\n".getBytes("UTF-8"));
 		out.flush();
 	}
 

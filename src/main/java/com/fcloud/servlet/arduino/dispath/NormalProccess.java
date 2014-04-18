@@ -5,9 +5,14 @@
  */
 package com.fcloud.servlet.arduino.dispath;
 
+import java.io.IOException;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.fcloud.bean.arduino.ArduinoCmd;
+import com.fcloud.bean.arduino.SendMessageClient;
 import com.fcloud.business.ArduinoCenter;
 import com.fcloud.servlet.arduino.ArduinoServletType;
 import com.fcloud.servlet.arduino.ServletProccess;
@@ -20,6 +25,8 @@ import com.fcloud.socket.ArduinoSocket;
  * @version 1.0
  */
 public class NormalProccess implements ServletProccess {
+
+	Logger logger = Logger.getLogger(NormalProccess.class);
 
 	protected ArduinoCenter center = ArduinoCenter.getInstance();
 
@@ -38,9 +45,32 @@ public class NormalProccess implements ServletProccess {
 			return "" + center.getClientNum();
 		case ArduinoServletType.getClientList:
 			return buildClientList();
+		case ArduinoServletType.sendClient:
+			return sendClient(message.getValue());
 		}
 
 		return null;
+	}
+
+	/**
+	 * @param value
+	 * @return
+	 */
+	protected String sendClient(String value) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			SendMessageClient sendMessageClient = mapper.readValue(value, SendMessageClient.class);
+			if (center.getConntions() != null) {
+				for (ArduinoSocket arduinoSocket : center.getConntions()) {
+					if (sendMessageClient.getDevice().equals(arduinoSocket.getName())) {
+						return arduinoSocket.sendLine(sendMessageClient.getMessage()) ? "1" : "0";
+					}
+				}
+			}
+		} catch (IOException e) {
+			logger.error("sendClient", e);
+		}
+		return "0";
 	}
 
 	protected String buildClientList() {
@@ -62,7 +92,8 @@ public class NormalProccess implements ServletProccess {
 	 */
 	@Override
 	public int[] getType() {
-		return new int[] { ArduinoServletType.getClientNum, ArduinoServletType.getClientList };
+		return new int[] { ArduinoServletType.getClientNum, ArduinoServletType.getClientList,
+				ArduinoServletType.sendClient };
 	}
 
 }
