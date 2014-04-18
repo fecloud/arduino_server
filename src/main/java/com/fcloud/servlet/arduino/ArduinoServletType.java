@@ -16,11 +16,15 @@ import com.fcloud.utils.Tools;
 public class ArduinoServletType {
 
 	public static final int getClientNum = 0x1;
+	
+	public static final int getClientList = 0x2;
 
 	public static final String paserString(int cmd) {
 		switch (cmd) {
 		case getClientNum:
 			return "getClientNum";
+		case getClientList:
+			return "getClientList";
 
 		default:
 			return "unknow";

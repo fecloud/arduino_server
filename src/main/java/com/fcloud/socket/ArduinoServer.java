@@ -122,7 +122,7 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 				ArduinoSocketImpl conn = null;
 				try {
 					selector.select();
-					
+
 					Set<SelectionKey> keys = selector.selectedKeys();
 					System.err.println("selector.select()" + keys.size());
 					Iterator<SelectionKey> i = keys.iterator();
@@ -139,6 +139,7 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 							channel.configureBlocking(false);
 							ArduinoSocketImpl w = new ArduinoSocketImpl(this);
 							w.key = channel.register(selector, SelectionKey.OP_READ, w);
+							w.setSocketAddress(channel.socket().getRemoteSocketAddress());
 							w.channel = channel;
 							i.remove();
 							allocateBuffers(w);
@@ -174,11 +175,11 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 							i.remove();
 						}
 					}
-				} catch ( CancelledKeyException e ) {
+				} catch (CancelledKeyException e) {
 					// an other thread may cancel the key
-				} catch ( ClosedByInterruptException e ) {
-					
-				}catch (IOException e) {
+				} catch (ClosedByInterruptException e) {
+
+				} catch (IOException e) {
 					if (key != null)
 						key.cancel();
 					handleIOException(key, conn, e);
@@ -343,6 +344,13 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 			}
 		}
 
+	}
+
+	/**
+	 * @return the conntions
+	 */
+	public List<ArduinoSocket> getConntions() {
+		return conntions;
 	}
 
 }

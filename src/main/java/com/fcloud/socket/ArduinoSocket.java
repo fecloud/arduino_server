@@ -6,6 +6,7 @@
 package com.fcloud.socket;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 
 /**
  * The class <code>ArduinoSocket</code>
@@ -34,5 +35,8 @@ public interface ArduinoSocket {
 	String getName();
 	
 	void setName(String name);
+	
+	SocketAddress getSocketAddress();
 
+	void setSocketAddress(SocketAddress address);
 }

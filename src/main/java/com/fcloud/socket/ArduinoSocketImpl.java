@@ -6,6 +6,7 @@
 package com.fcloud.socket;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.SelectionKey;
@@ -55,6 +56,8 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	private StringBuilder buffer = new StringBuilder();
 
 	private Queue<String> messages = new LinkedBlockingQueue<String>();
+
+	protected SocketAddress address;
 
 	/**
 	 * 
@@ -184,9 +187,9 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	 */
 	@Override
 	public boolean send(String message) throws IOException {
-		//logger.debug("send:" + message);
+		// logger.debug("send:" + message);
 		if (isConneted()) {
-			final byte [] bs = message.getBytes("UTF-8");
+			final byte[] bs = message.getBytes("UTF-8");
 			ByteBuffer buffer = ByteBuffer.wrap(bs);
 			buffer.put(bs);
 			buffer.flip();
@@ -227,6 +230,28 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	@Override
 	public void setName(String name) {
 		this.name = name;
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.fcloud.socket.ArduinoSocket#getSocketAddress()
+	 */
+	@Override
+	public SocketAddress getSocketAddress() {
+		return address;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.fcloud.socket.ArduinoSocket#setSocketAddress(java.net.
+	 * InetSocketAddress)
+	 */
+	@Override
+	public void setSocketAddress(SocketAddress address) {
+		this.address = address;
 
 	}
 

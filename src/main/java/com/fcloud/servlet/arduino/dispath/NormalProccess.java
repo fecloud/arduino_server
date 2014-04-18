@@ -5,10 +5,13 @@
  */
 package com.fcloud.servlet.arduino.dispath;
 
+import java.util.List;
+
 import com.fcloud.bean.arduino.ArduinoCmd;
 import com.fcloud.business.ArduinoCenter;
 import com.fcloud.servlet.arduino.ArduinoServletType;
 import com.fcloud.servlet.arduino.ServletProccess;
+import com.fcloud.socket.ArduinoSocket;
 
 /**
  * The class <code>NormalProccess</code>
@@ -33,8 +36,23 @@ public class NormalProccess implements ServletProccess {
 		switch (message.getType()) {
 		case ArduinoServletType.getClientNum:
 			return "" + center.getClientNum();
+		case ArduinoServletType.getClientList:
+			return buildClientList();
 		}
+
 		return null;
+	}
+
+	protected String buildClientList() {
+		final StringBuilder builder = new StringBuilder();
+		final List<ArduinoSocket> arduinoSockets = center.getConntions();
+		if (null != arduinoSockets) {
+			for (ArduinoSocket socket : arduinoSockets) {
+				builder.append(socket.getSocketAddress().toString().replaceAll("/", "")).append(
+						"\r\n");
+			}
+		}
+		return builder.toString();
 	}
 
 	/*
@@ -44,7 +62,7 @@ public class NormalProccess implements ServletProccess {
 	 */
 	@Override
 	public int[] getType() {
-		return new int[] { ArduinoServletType.getClientNum };
+		return new int[] { ArduinoServletType.getClientNum, ArduinoServletType.getClientList };
 	}
 
 }
