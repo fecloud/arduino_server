@@ -105,7 +105,13 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 			if (this.statu != Conn_Statu.HAND)
 				if (isHand(msg)) {
 					this.statu = Conn_Statu.HAND;
-					onOpen(this);
+					try {
+						sendLine("200");
+						onOpen(this);
+					} catch (IOException e) {
+						logger.error("onOpen error", e);
+					}
+					
 				} else {
 					listener.onAduinoSocketMessae(this, msg);
 				}
@@ -188,7 +194,7 @@ public class ArduinoSocketImpl implements ArduinoSocket {
 	@Override
 	public boolean send(String message) throws IOException {
 		// logger.debug("send:" + message);
-		if (isConneted()) {
+		if (isConneted() || statu == Conn_Statu.HAND) {
 			final byte[] bs = message.getBytes("UTF-8");
 			ByteBuffer buffer = ByteBuffer.wrap(bs);
 			buffer.put(bs);
