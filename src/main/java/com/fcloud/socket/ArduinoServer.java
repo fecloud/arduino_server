@@ -262,8 +262,12 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 	}
 
 	public void onAduinoSocketOpen(ArduinoSocket conn) {
-		onOpen(conn);
+		final ArduinoSocket arduinoSocket = getOnLine(conn.getName());
+		if (null != arduinoSocket) {
+			arduinoSocket.close();
+		}
 		conntions.add(conn);
+		onOpen(conn);
 	}
 
 	public void onAduinoSocketError(ArduinoSocket conn, Exception e) {
@@ -351,6 +355,21 @@ public abstract class ArduinoServer implements Runnable, ArduinoSocketListener {
 	 */
 	public List<ArduinoSocket> getConntions() {
 		return conntions;
+	}
+
+	/**
+	 * 在线列表是否有相同的客户端
+	 * 
+	 * @param name
+	 * @return
+	 */
+	public ArduinoSocket getOnLine(String name) {
+		for (ArduinoSocket arduinoSocket : conntions) {
+			if (arduinoSocket.getName().equals(name)) {
+				return arduinoSocket;
+			}
+		}
+		return null;
 	}
 
 }

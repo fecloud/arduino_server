@@ -39,4 +39,5 @@ public interface ArduinoSocket {
 	SocketAddress getSocketAddress();
 
 	void setSocketAddress(SocketAddress address);
+	
 }

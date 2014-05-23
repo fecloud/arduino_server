@@ -30,8 +30,9 @@ public class ArduinoClient extends Thread {
 	}
 
 	public void pre() throws UnknownHostException, IOException {
-		socket = new Socket("111.206.45.12", 30156);
-		socket.setSoTimeout(10000);
+		socket = new Socket("localhost", 30156);
+//		socket.setSoTimeout(10000);
+//		socket.set
 		OutputStream out = socket.getOutputStream();
 		out.write("Arduino Uno\r\n".getBytes("UTF-8"));
 		out.flush();
@@ -50,10 +51,10 @@ public class ArduinoClient extends Thread {
 				OutputStream out = null;
 				while (true) {
 					Thread.sleep(1000);
-					out = arduinoClient.socket.getOutputStream();
-					out.write(new String("" + System.currentTimeMillis() + "\r\n")
-							.getBytes("UTF-8"));
-					out.flush();
+//					out = arduinoClient.socket.getOutputStream();
+//					out.write(new String("" + System.currentTimeMillis() + "\r\n")
+//							.getBytes("UTF-8"));
+//					out.flush();
 
 				}
 			} catch (Exception e) {
